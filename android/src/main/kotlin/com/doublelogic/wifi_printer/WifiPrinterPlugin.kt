@@ -81,6 +81,9 @@ class WifiPrinterPlugin: FlutterPlugin, MethodCallHandler {
             "printTwoColumnData" ->{
                 printTwoColumnData(call, result)
             }
+            "printThreeColumnData" ->{
+                printThreeColumnData(call, result)
+            }
             
             "cutPaper" -> {
                 cutPaper(call, result);
@@ -456,6 +459,76 @@ class WifiPrinterPlugin: FlutterPlugin, MethodCallHandler {
         }
     }
 
+    private fun printThreeColumnData(call: MethodCall, result: MethodChannel.Result) {
+        val rowData = call.argument<Map<String, String>>("rowData")
+        if (rowData.isNullOrEmpty()) {
+            result.error("INVALID_DATA", "Row data is empty or null", null)
+            return
+        }
+
+        if (ISCONNECT) {
+            myBinder?.WriteSendData(object : TaskCallback {
+                override fun OnSucceed() {
+                    result.success(mapOf(
+                        "statusCode" to "00",
+                        "message" to "3-column data printed successfully"
+                    ))
+                }
+
+                override fun OnFailed() {
+                    result.error("PRINT_FAILED", "Failed to print 3-column data", null)
+                }
+            }, ProcessData {
+                val list: MutableList<ByteArray> = ArrayList()
+                list.add(DataForSendToPrinterPos80.initializePrinter())
+
+                // Retrieve column data
+                val leftColumn = rowData["left"] ?: ""
+                val middleColumn = rowData["middle"] ?: ""
+                val rightColumn = rowData["right"] ?: ""
+
+                // Printer's maximum character width per line
+                val maxWidth = 50
+                val spacing = 2 // Space between columns
+
+                // Adjusted column width distribution
+                val availableWidth = maxWidth - (spacing * 2) // 36 characters available
+                val middleColumnWidth = 5 // Fixed width for quantity
+                val leftColumnWidth = (availableWidth * 0.68).toInt() // 65% for product name
+                val rightColumnWidth = availableWidth - leftColumnWidth - middleColumnWidth // Remaining for price
+
+                // Debugging output
+                println("availableWidth: $availableWidth")
+                println("leftColumnWidth: $leftColumnWidth")
+                println("middleColumnWidth: $middleColumnWidth")
+                println("rightColumnWidth: $rightColumnWidth")
+
+                // Split product name into multiple lines if too long
+                val productNameLines = leftColumn.chunked(leftColumnWidth) // Break into chunks
+
+                // Print product name in multiple lines if needed
+                for ((index, line) in productNameLines.withIndex()) {
+                    val qty = if (index == 0) middleColumn.take(middleColumnWidth) else "" // Print qty only on first line
+                    val price = if (index == 0) rightColumn.take(rightColumnWidth) else "" // Print price only on first line
+                    
+                    val formattedLine = String.format(
+                        "%-${leftColumnWidth}s %-${middleColumnWidth}s %${rightColumnWidth}s",
+                        line,
+                        qty,
+                        price
+                    )
+                    
+                    list.add(StringUtils.strTobytes(formattedLine))
+                }
+
+                // Add print and feed line command
+                list.add(DataForSendToPrinterPos80.printAndFeedLine())
+                list
+            })
+        } else {
+            result.error("PRINTER_NOT_CONNECTED", "Printer is not connected", null)
+        }
+    }
 
 
     private fun printEmptyLine(call: MethodCall, result: MethodChannel.Result){

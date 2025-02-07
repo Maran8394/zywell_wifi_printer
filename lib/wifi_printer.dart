@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/services.dart';
@@ -63,7 +62,7 @@ class WifiPrinter {
       Map<String, dynamic> dataMap = Map<String, dynamic>.from(result);
       log(dataMap.toString());
       return dataMap;
-    } on Exception {
+    } catch (e) {
       rethrow;
     }
   }
@@ -199,6 +198,15 @@ class WifiPrinter {
       {required Map<String, String> rowData}) async {
     try {
       await _channel.invokeMethod('printTwoColumnData', {"rowData": rowData});
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> printThreeColumnData(
+      {required Map<String, String> rowData}) async {
+    try {
+      await _channel.invokeMethod('printThreeColumnData', {"rowData": rowData});
     } catch (e) {
       rethrow;
     }

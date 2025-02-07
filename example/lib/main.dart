@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Plugin doublelogic app'),
         ),
         body: ListView(
           padding: const EdgeInsets.all(20),
